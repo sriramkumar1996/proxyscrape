@@ -32,7 +32,7 @@ from .errors import (
     InvalidResourceError,
     InvalidResourceTypeError
 )
-from .scrapers import RESOURCE_MAP, RESOURCE_TYPE_MAP, ProxyResource
+from .scrapers import RESOURCE_MAP, RESOURCE_TYPE_MAP, ProxyResource, get_didsoft_proxies
 from .stores import Store, FILTER_OPTIONS
 from .shared import is_iterable
 
@@ -42,7 +42,7 @@ COLLECTORS = {}
 _collector_lock = Lock()
 
 
-def create_collector(name, resource_types=None, refresh_interval=3600, resources=None):
+def create_collector(name, resource_types=None, refresh_interval=3600, resources=None, elite=False):
     """Creates a new collector to scrape and retrieve proxies.
 
     Collectors are stored at the module level. A collector should be creates at the start of the application, and can be
@@ -80,8 +80,7 @@ def create_collector(name, resource_types=None, refresh_interval=3600, resources
         # Ensure not added by the time entered lock
         if name in COLLECTORS:
             raise CollectorAlreadyDefinedError('{} is already defined as a collector'.format(name))
-
-        collector = Collector(resource_types, refresh_interval, resources)
+        collector = Collector(resource_types, refresh_interval, resources, elite)
         COLLECTORS[name] = collector
         return collector
 
@@ -124,10 +123,10 @@ class Collector:
     :raises InvalidResourceTypeError:
         If 'resource_type' is not a valid resource type.
     """
-    def __init__(self, resource_types, refresh_interval, resources):
+    def __init__(self, resource_types, refresh_interval, resources, elite):
         self._store = Store()
         self._blacklist = set()
-
+        self.elite = elite
         if resource_types is not None:
             self._resource_types = set(resource_types) if is_iterable(resource_types) else {resource_types, }
             self._validate_resource_types(self._resource_types)
@@ -139,7 +138,7 @@ class Collector:
         # Input validations
         resources = self._parse_resources(self._resource_types, resources)
         self._validate_resources(resources)
-
+        print(resources)
         self._resource_map = self._create_resource_map(resources, refresh_interval)
 
     def _create_resource_map(self, resources, refresh_interval):
@@ -173,6 +172,23 @@ class Collector:
         if resources is None:
             if resource_types is None:
                 raise InvalidResourceError('No resource or resource type given')
+
+            if self.elite:
+                RESOURCE_TYPE_MAP = {
+                    'http': {
+                        'didsoft-list',
+                    },
+                    'https': {
+                        'didsoft-list',
+                    },
+                    'socks4': {
+                    },
+                    'socks5': {
+                    }
+                }
+                RESOURCE_MAP = {
+                    'didsoft-list': get_didsoft_proxies,
+                }
 
             res = set()
             for resource_type in resource_types:

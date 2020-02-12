@@ -1,25 +1,6 @@
 Proxy Scrape
 ============
 
-.. image:: https://img.shields.io/travis/JaredLGillespie/proxyscrape.svg
-    :alt: Travis
-    :target: https://travis-ci.org/JaredLGillespie/proxyscrape
-.. image:: https://img.shields.io/coveralls/github/JaredLGillespie/proxyscrape.svg
-    :alt: Coveralls github
-    :target: https://coveralls.io/github/JaredLGillespie/proxyscrape
-.. image:: https://img.shields.io/pypi/v/proxyscrape.svg
-    :alt: PyPI
-    :target: https://pypi.org/project/proxyscrape/
-.. image:: https://img.shields.io/pypi/wheel/proxyscrape.svg
-    :alt: PyPI - Wheel
-    :target: https://pypi.org/project/proxyscrape/
-.. image:: https://img.shields.io/pypi/pyversions/proxyscrape.svg
-    :alt: PyPI - Python Version
-    :target: https://pypi.org/project/proxyscrape/
-.. image:: https://img.shields.io/pypi/l/proxyscrape.svg
-    :alt: PyPI - License
-    :target: https://pypi.org/project/proxyscrape/
-
 A library for retrieving free proxies (HTTP, HTTPS, SOCKS4, SOCKS5). Supports Python 2.7+ and 3.4+.
 
 *NOTE: This library isn't designed for production use. It's advised to use your own proxies or purchase a service which
@@ -288,19 +269,19 @@ Contribution
 Contributions or suggestions are welcome! Feel free to `open an issue`_ if a bug is found or an enhancement is desired,
 or even a `pull request`_.
 
-.. _open an issue: https://github.com/jaredlgillespie/proxyscrape/issues
-.. _pull request: https://github.com/jaredlgillespie/proxyscrape/compare
+.. _open an issue: https://github.com/sriramkumar1996/proxyscrape/issues
+.. _pull request: https://github.com/sriramkumar1996/proxyscrape/compare
 
 Changelog
 ---------
 
 All changes and versioning information can be found in the `CHANGELOG`_.
 
-.. _CHANGELOG: https://github.com/JaredLGillespie/proxyscrape/blob/master/CHANGELOG.rst
+.. _CHANGELOG: https://github.com/sriramkumar1996/proxyscrape/blob/master/CHANGELOG.rst
 
 License
 -------
 
-Copyright (c) 2018 Jared Gillespie. See `LICENSE`_ for details.
+Copyright (c) 2020 Sriram Kumar. See `LICENSE`_ for details.
 
-.. _LICENSE: https://github.com/JaredLGillespie/proxyscrape/blob/master/LICENSE.txt
+.. _LICENSE: https://github.com/sriramkumar1996/proxyscrape/blob/master/LICENSE.txt

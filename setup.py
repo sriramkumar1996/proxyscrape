@@ -14,9 +14,9 @@ setup(
     version=version,
     description='A library for retrieving free proxies (HTTP, HTTPS, SOCKS4, SOCKS5).',
     long_description=long_description,
-    url='https://github.com/jaredlgillespie/proxyscrape',
+    url='https://github.com/sriramkumar1996/proxyscrape',
     author='Jared Gillespie',
-    author_email='jaredlgillespie@hotmail.com',
+    author_email='srirambsk1996@gmail.com',
     license='MIT',
     classifiers=[
         'Development Status :: 4 - Beta',
