@@ -41,8 +41,7 @@ from .shared import is_iterable
 COLLECTORS = {}
 _collector_lock = Lock()
 
-
-def create_collector(name, resource_types=None, refresh_interval=3600, resources=None, elite=False):
+def create_collector(name, resource_types=None, refresh_interval=3600, resources=None, elite=False, external_url=None):
     """Creates a new collector to scrape and retrieve proxies.
 
     Collectors are stored at the module level. A collector should be creates at the start of the application, and can be
@@ -80,10 +79,9 @@ def create_collector(name, resource_types=None, refresh_interval=3600, resources
         # Ensure not added by the time entered lock
         if name in COLLECTORS:
             raise CollectorAlreadyDefinedError('{} is already defined as a collector'.format(name))
-        collector = Collector(resource_types, refresh_interval, resources, elite)
+        collector = Collector(resource_types, refresh_interval, resources, elite, external_url)
         COLLECTORS[name] = collector
         return collector
-
 
 def get_collector(name):
     """Retrieves a defined collector.
@@ -123,10 +121,12 @@ class Collector:
     :raises InvalidResourceTypeError:
         If 'resource_type' is not a valid resource type.
     """
-    def __init__(self, resource_types, refresh_interval, resources, elite):
+    def __init__(self, resource_types, refresh_interval, resources, elite, external_url):
         self._store = Store()
         self._blacklist = set()
         self.elite = elite
+        self.external_url = external_url
+
         if resource_types is not None:
             self._resource_types = set(resource_types) if is_iterable(resource_types) else {resource_types, }
             self._validate_resource_types(self._resource_types)
@@ -138,19 +138,30 @@ class Collector:
         # Input validations
         resources = self._parse_resources(self._resource_types, resources)
         self._validate_resources(resources)
-        print(resources)
         self._resource_map = self._create_resource_map(resources, refresh_interval)
 
     def _create_resource_map(self, resources, refresh_interval):
         resource_map = dict()
-        for resource in resources:
-            id = self._store.add_store()
-            func = RESOURCE_MAP[resource]
-            resource_map[resource] = {
-                'proxy-resource': ProxyResource(func, refresh_interval),
-                'id': id
+        if self.elite and not self.external_url:
+            raise InvalidResourceError('No external url given, please add the field PROXY_POOL_EXTERNAL_URL')
+        else:
+            RESOURCE_MAP2 = {
+                'didsoft-proxy-list': get_didsoft_proxies
             }
-
+            for resource in resources:
+                id = self._store.add_store()
+                if self.elite and self.external_url:
+                    func = RESOURCE_MAP2[resource]
+                    resource_map[resource] = {
+                        'proxy-resource': ProxyResource(func, refresh_interval, self.external_url),
+                        'id': id
+                    }
+                else:
+                    func = RESOURCE_MAP[resource]
+                    resource_map[resource] = {
+                        'proxy-resource': ProxyResource(func, refresh_interval, None),
+                        'id': id
+                    }
         return resource_map
 
     def _extend_filter(self, existing_filter_opts, new_filter_opts):
@@ -172,28 +183,27 @@ class Collector:
         if resources is None:
             if resource_types is None:
                 raise InvalidResourceError('No resource or resource type given')
-
+            res = set()
             if self.elite:
-                RESOURCE_TYPE_MAP = {
+                RESOURCE_TYPE_MAP2 = {
                     'http': {
-                        'didsoft-list',
+                        'didsoft-proxy-list',
                     },
                     'https': {
-                        'didsoft-list',
+                        'didsoft-proxy-list',
                     },
                     'socks4': {
                     },
                     'socks5': {
                     }
                 }
-                RESOURCE_MAP = {
-                    'didsoft-list': get_didsoft_proxies,
-                }
-
-            res = set()
-            for resource_type in resource_types:
-                res.update(RESOURCE_TYPE_MAP[resource_type])
-            return res
+                for resource_type in resource_types:
+                    res.update(RESOURCE_TYPE_MAP2[resource_type])
+                return res
+            else:
+                for resource_type in resource_types:
+                    res.update(RESOURCE_TYPE_MAP[resource_type])
+                return res  
 
         if is_iterable(resources):
             return set(resources)
@@ -224,9 +234,14 @@ class Collector:
                 '{} defined an invalid resource type'.format(resource_types))
 
     def _validate_resources(self, resources):
-        for resource in resources:
-            if resource not in RESOURCE_MAP:
-                raise InvalidResourceError('{} is an invalid resource'.format(resource))
+        if self.elite:
+            for resource in resources:
+                if resource not in 'didsoft-proxy-list':
+                    raise InvalidResourceError('{} is an invalid resource'.format(resource))
+        else:   
+            for resource in resources:
+                if resource not in RESOURCE_MAP:
+                    raise InvalidResourceError('{} is an invalid resource'.format(resource))
 
     def apply_filter(self, filter_opts):
         """Applies a filter to the collector for retrieving proxies matching specific criteria.
@@ -324,7 +339,6 @@ class Collector:
         self._extend_filter(combined_filter_opts, filter_opts)
 
         self._refresh_resources(False)
-
         return self._store.get_proxy(combined_filter_opts, self._blacklist)
 
     def get_proxies(self, filter_opts=None):

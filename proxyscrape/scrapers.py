@@ -41,6 +41,7 @@ from .shared import (
     Proxy,
     request_proxy_list
 )
+
 _resource_lock = Lock()
 _resource_type_lock = Lock()
 
@@ -58,11 +59,12 @@ class ProxyResource:
     :type func: function
     :type refresh_interval: int
     """
-    def __init__(self, func, refresh_interval):
+    def __init__(self, func, refresh_interval, external_url=None):
         self._func = func
         self._refresh_interval = refresh_interval
         self._lock = Lock()
         self._last_refresh_time = 0
+        self.external_url = external_url
 
     def refresh(self, force=False):
         """Refreshes proxies.
@@ -84,13 +86,42 @@ class ProxyResource:
             if force or self._last_refresh_time + self._refresh_interval <= time.time():
 
                 try:
-                    proxies = self._func()
+                    if self.external_url:
+                        proxies = self._func(self.external_url)
+                    else:
+                        proxies = self._func()
                     self._last_refresh_time = time.time()
                     return True, proxies
                 except (InvalidHTMLError, RequestNotOKError, RequestFailedError):
                     pass
 
         return False, None
+
+
+def get_didsoft_proxies(url):
+    response = request_proxy_list(url)
+
+    try:
+        proxies = set()
+        data = response.content.decode('utf-8')
+        data = json.loads(data)
+        lproxy = data['result']
+        for proxy in lproxy:
+            xproxy = proxy.split('#')
+            if len(xproxy) == 2:
+                code = xproxy[1]
+                yproxy = xproxy[0].split(':')
+                if len(yproxy) == 2:
+                    host = yproxy[0]                
+                    port = yproxy[1]                
+                    country = country_codes[code] if code in country_codes else 'United States'
+                    anonymous = 'anonymous'
+                    version = 'http'
+                    proxies.add(Proxy(host, port, code, country, anonymous, version, 'didsoft-proxy-list'))
+        return proxies
+
+    except (AttributeError, KeyError):
+        raise InvalidHTMLError()
 
 
 def get_anonymous_proxies():
@@ -114,33 +145,6 @@ def get_anonymous_proxies():
             proxies.add(Proxy(host, port, code, country, anonymous, version, 'anonymous-proxy'))
 
         return proxies
-    except (AttributeError, KeyError):
-        raise InvalidHTMLError()
-
-
-def get_didsoft_proxies():
-    url = 'http://192.168.20.167:8000/get_proxies'
-    response = request_proxy_list(url)
-
-    try:
-        proxies = set()
-        data = response.content.decode('utf-8')
-        data = json.loads(data)
-        lproxy = data['result']
-        for proxy in lproxy:
-            xproxy = proxy.split('#')
-            if len(xproxy) == 2:
-                code = xproxy[1]
-                yproxy = xproxy[0].split(':')
-                if len(yproxy) == 2:
-                    host = yproxy[0]                
-                    port = yproxy[1]                
-                    country = country_codes[code] if code in country_codes else 'United States'
-                    anonymous = 'anonymous'
-                    version = 'http'
-                    proxies.add(Proxy(host, port, code, country, anonymous, version, 'didsoft-proxy-list'))
-        return proxies
-
     except (AttributeError, KeyError):
         raise InvalidHTMLError()
 
@@ -414,7 +418,6 @@ def get_resources():
 RESOURCE_MAP = {
     'anonymous-proxy': get_anonymous_proxies,
     'free-proxy-list': get_free_proxy_list_proxies,
-    'didsoft-list': get_didsoft_proxies,
     'proxy-daily-http': get_proxy_daily_http_proxies,
     'proxy-daily-socks4': get_proxy_daily_socks4_proxies,
     'proxy-daily-socks5': get_proxy_daily_socks5_proxies,
@@ -426,7 +429,6 @@ RESOURCE_MAP = {
 
 RESOURCE_TYPE_MAP = {
     'http': {
-        'didsoft-list',
         'us-proxy',
         'uk-proxy',
         'free-proxy-list',
@@ -434,7 +436,6 @@ RESOURCE_TYPE_MAP = {
         'anonymous-proxy'
     },
     'https': {
-        'didsoft-list',
         'us-proxy',
         'uk-proxy',
         'free-proxy-list',
